@@ -217,6 +217,15 @@ int after_mqueue_msgs (mqueue_t *queue) ;
 // funcao para debug. imprime os campos da estrutura task_t
 void print_tcb( task_t* task );
 
+// funcao que ajusta prioridade com base no tempo de execucao total
+
+void task_set_eet (task_t *task, int et);
+// funcao que devolve valor do tempo estimado de execucao
+int task_get_eet(task_t *task);
+
+// funcao que devolve valor do temo restante para terminar a execucao
+int task_get_ret(task_t *task);
+
 //==============================================================================
 
 // Redefinir funcoes POSIX "proibidas" como "FORBIDDEN" (gera erro ao compilar)
@@ -290,6 +299,6 @@ void print_tcb( task_t* task );
 #define PRINT_READY_QUEUE      queue_print ("Ready Queue", (queue_t*)readyQueue, (void*)&print_tcb );
 #define PPOS_PREEMPT_ENABLE    preemption = 1;
 #define PPOS_PREEMPT_DISABLE   preemption = 0;
-#define PPOS_IS_PREEMPT_ACTIVE (preemption == 1)
+#define PPOS_IS_PREEMPT_ACTIVE (preemption == 1);
 
 #endif

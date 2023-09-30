@@ -44,12 +44,21 @@ int main (int argc, char *argv[])
    printf ("main: inicio\n");
 
    ppos_init () ;
-
    task_create (&Pang, Body, "    Pang") ;
+   // task_set_eet(&Pang, 10);
+
    task_create (&Peng, Body, "        Peng") ;
+   // task_set_eet(&Peng, 10);
+
    task_create (&Ping, Body, "            Ping") ;
+   // task_set_eet(&Ping, 10);
+
    task_create (&Pong, Body, "                Pong") ;
+   // task_set_eet(&Pong, 10);
+
    task_create (&Pung, Body, "                    Pung") ;
+   // task_set_eet(&Pung, 10);
+
 
    task_join(&Pang);
    task_join(&Peng);
@@ -57,6 +66,7 @@ int main (int argc, char *argv[])
    task_join(&Pong);
    task_join(&Pung);
 
-   printf ("main: fim\n");
+
+   printf ("\nmain: fim\n");
    exit (0);
 }

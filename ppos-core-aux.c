@@ -1,12 +1,49 @@
 #include "ppos.h"
 #include "ppos-core-globals.h"
 #include <string.h>
+#include <sys/time.h>
+#include <time.h>
 
 
 // ****************************************************************************
 // Coloque aqui as suas modificações, p.ex. includes, defines variáveis, 
 // estruturas e funções
 
+void task_set_eet (task_t *task, int et) {
+    int tempoAtual = systime();
+    if(task){
+        task->tempo_execucao = et;
+        if(task->state == PPOS_TASK_STATE_EXECUTING)
+        {
+            task->tempo_restante = task->tempo_execucao - (tempoAtual - task->tempo_inicial);
+        }
+    }
+    else{ 
+        taskExec->tempo_execucao = et;
+        if(taskExec->state == PPOS_TASK_STATE_EXECUTING)
+        {
+            taskExec->tempo_restante = taskExec->tempo_execucao - (tempoAtual - taskExec->tempo_inicial);
+        }
+    }
+}
+
+int task_get_eet(task_t *task) {
+    if(task)
+        return task->tempo_execucao;
+    return taskExec->tempo_execucao;
+}
+
+int task_get_ret(task_t *task) {
+    int tempoAtual = systime();
+    if(task){
+        task->tempo_restante = task->tempo_execucao - (tempoAtual - task->tempo_inicial);
+        return task->tempo_restante;
+    }
+    else{
+        taskExec->tempo_restante = taskExec->tempo_execucao - (tempoAtual - taskExec->tempo_inicial);
+        return taskExec->tempo_restante;
+    }
+}
 
 // ****************************************************************************
 
@@ -17,7 +54,8 @@ void before_ppos_init () {
 #ifdef DEBUG
     printf("\ninit - BEFORE");
 #endif
-    printf("Mensagem inico - Init\n");
+    //printf("Mensagem inico - Init\n");
+    //printf("%d\n", clock());
 }
 
 void after_ppos_init () {
@@ -25,11 +63,11 @@ void after_ppos_init () {
 #ifdef DEBUG
     printf("\ninit - AFTER");
 #endif
-    printf("Mensagem fim - Init\n");
+    //printf("Mensagem fim - Init\n");
 }
 
 void before_task_create (task_t *task ) {
-    // put your customization here
+    // printf("before\n");
 #ifdef DEBUG
     printf("\ntask_create - BEFORE - [%d]", task->id);
 #endif
@@ -37,10 +75,11 @@ void before_task_create (task_t *task ) {
 
 void after_task_create (task_t *task ) {
     // put your customization here
+    task->tempo_execucao = 99999;
 #ifdef DEBUG
     printf("\ntask_create - AFTER - [%d]", task->id);
 #endif
-    memcpy(&task->msg, "MINHA TAREFA\0", 13);
+    //memcpy(&task->msg, "MINHA TAREFA\0", 13);
 }
 
 void before_task_exit () {
@@ -66,6 +105,7 @@ void before_task_switch ( task_t *task ) {
 
 void after_task_switch ( task_t *task ) {
     // put your customization here
+    task->tempo_inicial = systime();
 #ifdef DEBUG
     printf("\ntask_switch - AFTER - [%d -> %d]", taskExec->id, task->id);
 #endif
@@ -127,7 +167,8 @@ void after_task_sleep () {
 #endif
 }
 
-int before_task_join (task_t *task) {
+int before_task_join(task_t *task)
+{
     // put your customization here
 #ifdef DEBUG
     printf("\ntask_join - BEFORE - [%d]", taskExec->id);
@@ -138,7 +179,7 @@ int before_task_join (task_t *task) {
 int after_task_join (task_t *task) {
     // put your customization here
 #ifdef DEBUG
-    printf("\ntask_join - AFTER - [%d]", taskExec->id);
+    printf("\ntask_join - AFTER - [%d]\n", task->prev);
 #endif
     return 0;
 }
@@ -401,8 +442,10 @@ int after_mqueue_msgs (mqueue_t *queue) {
 }
 
 task_t * scheduler() {
-    // FCFS scheduler
+    
     if ( readyQueue != NULL ) {
+        printf("\n%d\n", readyQueue->id);
+        // task_t* readyQueueAux = readyQueue;
         return readyQueue;
     }
     return NULL;
