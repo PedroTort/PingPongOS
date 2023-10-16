@@ -17,8 +17,8 @@ typedef struct task_t
    struct task_t *prev, *next ;		// ponteiros para usar em filas
    int id ;				// identificador da tarefa
    ucontext_t context ;			// contexto armazenado da tarefa
-   unsigned char state;  // indica o estado de uma tarefa (ver defines no final do arquivo ppos.h): 
-                          // n - nova, r - pronta, x - executando, s - suspensa, e - terminada
+   unsigned char state;    // indica o estado de uma tarefa (ver defines no final do arquivo ppos.h): 
+                           // n - nova, r - pronta, x - executando, s - suspensa, e - terminada
    struct task_t* queue;
    struct task_t* joinQueue;
    int exitCode;
@@ -27,6 +27,12 @@ typedef struct task_t
    // ... (outros campos deve ser adicionados APOS esse comentario)
    unsigned int tempo_inicial;
    unsigned int tempo_execucao;
+   unsigned int tempo_restante;
+   unsigned int quantum;
+
+   int user_task;
+   int ativacoes        // quantidade de vezes que a tarefa foi ativada
+
    
 } task_t ;
 
