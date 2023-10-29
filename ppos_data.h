@@ -28,7 +28,6 @@ typedef struct task_t
    
    unsigned int tempo_inicial;
    unsigned int tempo_estimado_execucao;
-   unsigned int tempo_estimado_restante;
    unsigned int tempo_ja_executado;
    unsigned int quantum;
 

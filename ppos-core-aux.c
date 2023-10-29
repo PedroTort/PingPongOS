@@ -14,27 +14,22 @@ struct sigaction action ;
 // estrutura de inicialização to timer
 struct itimerval timer ;
 
-const int quantum = 1; // em milissegundos
+#define QUANTUM 20
+#define TICK_TIME 1 // tempo entre dois ticks consecutivos
 
 void interrupt_service_routine(int signum) {
-    systemTime += quantum;
-    if(taskExec->id == 1) {return;}
-    if(taskExec->quantum > 0)
-    {   
-        taskExec->tempo_ja_executado += quantum;
-        taskExec->quantum--;
-    }
-    else
-    {   
-        taskExec->tempo_ja_executado += quantum;
-        //taskExec->quantum = 20;
-        task_yield(taskExec);
-    }
+    systemTime += TICK_TIME;
+    if(taskExec->id == 1) return;
+
+    taskExec->tempo_ja_executado += TICK_TIME;
+    
+    if(taskExec->quantum > 0) taskExec->quantum--;
+
+    else task_yield(taskExec);
 }
 
 void interrupt_service_routine_init() {
-    printf("Inicializando\n");
-// registra a ação para o sinal de timer SIGALRM
+
   action.sa_handler = interrupt_service_routine ;
   sigemptyset (&action.sa_mask) ;
   action.sa_flags = 0 ;
@@ -47,7 +42,7 @@ void interrupt_service_routine_init() {
   // ajusta valores do temporizador
   timer.it_value.tv_usec = 1;      // primeiro disparo, em micro-segundos
   timer.it_value.tv_sec  = 0 ;      // primeiro disparo, em segundos
-  timer.it_interval.tv_usec = quantum *1000;   // disparos subsequentes, em micro-segundos
+  timer.it_interval.tv_usec = TICK_TIME *1000;   // disparos subsequentes, em micro-segundos
   timer.it_interval.tv_sec  =  0;   // disparos subsequentes, em segundos
 
   // arma o temporizador ITIMER_REAL (vide man setitimer)
@@ -59,32 +54,46 @@ void interrupt_service_routine_init() {
 }
 
 void task_set_eet (task_t *task, int et) {
-    if(task){
+    if(task)
         task->tempo_estimado_execucao = et;
-    }
-    else{ 
+    else 
         taskExec->tempo_estimado_execucao = et;
-    }
 }
 
 int task_get_eet(task_t *task) {
     if(task)
         return task->tempo_estimado_execucao;
-    else{
+    else
         return taskExec->tempo_estimado_execucao;
-    }
 }
 
 int task_get_ret(task_t *task) {
-    //int tempoAtual = systime();
-    if(task){
-        //task->tempo_restante = task->tempo_execucao - (tempoAtual - task->tempo_inicial);
+    if(task)
         return task->tempo_estimado_execucao - task->tempo_ja_executado;
-    }
-    else{
-        //taskExec->tempo_restante = taskExec->tempo_execucao - (tempoAtual - taskExec->tempo_inicial);
+    else
         return taskExec->tempo_estimado_execucao - taskExec->tempo_ja_executado;
+}
+
+
+task_t * scheduler() {
+    if ( readyQueue != NULL ) {
+
+        task_t* readyQueueAux = readyQueue;
+        task_t* minTimeLeftTask = readyQueueAux;
+
+        readyQueueAux = readyQueueAux->next;
+        int firstId = readyQueue->id;
+
+        while(readyQueueAux->id != firstId){
+            if(task_get_ret(readyQueueAux) < task_get_ret(minTimeLeftTask))
+                minTimeLeftTask = readyQueueAux;
+            readyQueueAux = readyQueueAux->next;
+        }
+
+        return minTimeLeftTask;
     }
+
+    return NULL;
 }
 
 // ****************************************************************************
@@ -146,7 +155,7 @@ void before_task_switch ( task_t *task ) {
 void after_task_switch ( task_t *task ) {
     // put your customization here
     task->ativacoes += 1;
-    if(task->quantum == 0){task->quantum  = 20;};
+    if(task->quantum == 0){task->quantum  = QUANTUM;};
 #ifdef DEBUG
     printf("\ntask_switch - AFTER - [%d -> %d]", taskExec->id, task->id);
 #endif
@@ -478,28 +487,6 @@ int after_mqueue_msgs (mqueue_t *queue) {
     printf("\nmqueue_msgs - AFTER - [%d]", taskExec->id);
 #endif
     return 0;
-}
-
-task_t * scheduler() {
-    if ( readyQueue != NULL ) {
-
-        task_t* readyQueueAux = readyQueue;
-        task_t* minTimeLeftTask = readyQueueAux;
-        readyQueueAux = readyQueueAux->next;
-        int firstId = readyQueue->id;
-        while(readyQueueAux->id != firstId){
-            if(task_get_ret(readyQueueAux) < task_get_ret(minTimeLeftTask))
-                minTimeLeftTask = readyQueueAux;
-            readyQueueAux = readyQueueAux->next;
-        }
-        //Para contar metricas de ativacoes
-        //if (minTimeLeftTask->id != prevTaskId) {minTimeLeftTask->ativacoes ++; prevTaskId = minTimeLeftTask->id;}
-
-        return minTimeLeftTask;
-    }
-    else{
-        return NULL;
-    }
 }
 
 
