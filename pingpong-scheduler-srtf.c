@@ -26,8 +26,6 @@ char new_task_name[15];
 task_t new_user_tasks[50];
 int last_created_task = 0;
 
-
-
 // corpo das threads
 void Body (void * arg)
 {
