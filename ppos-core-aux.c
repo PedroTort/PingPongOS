@@ -15,18 +15,19 @@ struct sigaction action ;
 struct itimerval timer ;
 
 const int quantum = 1; // em milissegundos
-int prevTaskId = 0;
 
 void interrupt_service_routine(int signum) {
     systemTime += quantum;
     if(taskExec->id == 1) {return;}
-    if(taskExec->quantum >0)
+    if(taskExec->quantum > 0)
     {   
         taskExec->tempo_ja_executado += quantum;
         taskExec->quantum--;
     }
     else
     {   
+        taskExec->tempo_ja_executado += quantum;
+        taskExec->quantum = 20;
         task_yield(taskExec);
     }
 }
@@ -44,7 +45,7 @@ void interrupt_service_routine_init() {
   }
 
   // ajusta valores do temporizador
-  timer.it_value.tv_usec = quantum*1000 ;      // primeiro disparo, em micro-segundos
+  timer.it_value.tv_usec = 1;      // primeiro disparo, em micro-segundos
   timer.it_value.tv_sec  = 0 ;      // primeiro disparo, em segundos
   timer.it_interval.tv_usec = quantum *1000;   // disparos subsequentes, em micro-segundos
   timer.it_interval.tv_sec  =  0;   // disparos subsequentes, em segundos
@@ -60,17 +61,9 @@ void interrupt_service_routine_init() {
 void task_set_eet (task_t *task, int et) {
     if(task){
         task->tempo_estimado_execucao = et;
-        if(task->state == PPOS_TASK_STATE_EXECUTING)
-        {
-            task->tempo_estimado_restante = task->tempo_estimado_execucao - task->tempo_ja_executado;
-        }
     }
     else{ 
         taskExec->tempo_estimado_execucao = et;
-        if(taskExec->state == PPOS_TASK_STATE_EXECUTING)
-        {   
-            taskExec->tempo_estimado_restante = taskExec->tempo_estimado_execucao - taskExec->tempo_ja_executado;
-        }
     }
 }
 
@@ -106,7 +99,6 @@ void before_ppos_init () {
 void after_ppos_init () {
     // put your customization here
     interrupt_service_routine_init();
-    taskMain->quantum = 20;
     task_set_eet(taskMain, 99999);
 #ifdef DEBUG
     printf("\ninit - AFTER");
@@ -138,7 +130,7 @@ void before_task_exit () {
 
 void after_task_exit () {
     // put your customization here
-    printf("Task %d exit: execution time %d ms, processor time %d ms, %d activations\n",taskExec->id,systemTime - taskExec->tempo_inicial,taskExec->tempo_ja_executado,taskExec->ativacoes);
+    printf("Task %d exit: execution time %d ms, processor time %d ms, %d activations\n",taskExec->id,systime() - taskExec->tempo_inicial,taskExec->tempo_ja_executado,taskExec->ativacoes);
 #ifdef DEBUG
     printf("\ntask_exit - AFTER- [%d]", taskExec->id);
 #endif
@@ -153,8 +145,7 @@ void before_task_switch ( task_t *task ) {
 
 void after_task_switch ( task_t *task ) {
     // put your customization here
-    task->quantum = 20;
-    
+    task->ativacoes += 1;
 #ifdef DEBUG
     printf("\ntask_switch - AFTER - [%d -> %d]", taskExec->id, task->id);
 #endif
@@ -501,8 +492,11 @@ task_t * scheduler() {
             readyQueueAux = readyQueueAux->next;
         }
         //Para contar metricas de ativacoes
-        if (minTimeLeftTask->id != prevTaskId) {minTimeLeftTask->ativacoes ++; prevTaskId = minTimeLeftTask->id;}
+        //if (minTimeLeftTask->id != prevTaskId) {minTimeLeftTask->ativacoes ++; prevTaskId = minTimeLeftTask->id;}
         return minTimeLeftTask;
+    }
+    else{
+        return NULL;
     }
 }
 
