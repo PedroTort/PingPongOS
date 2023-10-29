@@ -27,7 +27,7 @@ void interrupt_service_routine(int signum) {
     else
     {   
         taskExec->tempo_ja_executado += quantum;
-        taskExec->quantum = 20;
+        //taskExec->quantum = 20;
         task_yield(taskExec);
     }
 }
@@ -146,6 +146,7 @@ void before_task_switch ( task_t *task ) {
 void after_task_switch ( task_t *task ) {
     // put your customization here
     task->ativacoes += 1;
+    if(task->quantum == 0){task->quantum  = 20;};
 #ifdef DEBUG
     printf("\ntask_switch - AFTER - [%d -> %d]", taskExec->id, task->id);
 #endif
@@ -493,6 +494,7 @@ task_t * scheduler() {
         }
         //Para contar metricas de ativacoes
         //if (minTimeLeftTask->id != prevTaskId) {minTimeLeftTask->ativacoes ++; prevTaskId = minTimeLeftTask->id;}
+
         return minTimeLeftTask;
     }
     else{
