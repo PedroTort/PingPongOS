@@ -25,8 +25,15 @@ typedef struct task_t
    unsigned int awakeTime; // used to store the time when it should be waked up
 
    // ... (outros campos deve ser adicionados APOS esse comentario)
-   char msg[20];
    
+   unsigned int tempo_inicial;
+   unsigned int tempo_estimado_execucao;
+   unsigned int tempo_estimado_restante;
+   unsigned int tempo_ja_executado;
+   unsigned int quantum;
+
+   int ativacoes;
+
 } task_t ;
 
 // estrutura que define um semáforo

@@ -48,9 +48,8 @@ nova tarefa é incluída na fila de tarefas prontas.
 
 // Inicializa o sistema operacional; deve ser chamada no inicio do main()
 void ppos_init ();
-void before_ppos_init (); // Antes de começar o codigo que o professor desenvolveu, chama essa função
-void after_ppos_init (); // Depois que implementou, chame essa after
-                        // Após o retorno dessa funcao, o PPOS troca imediatamente 
+void before_ppos_init ();
+void after_ppos_init (); // Após o retorno dessa funcao, o PPOS troca imediatamente 
                          // o contexto para o despachante de tarefas.
 
 // gerência de tarefas =========================================================
@@ -216,6 +215,16 @@ int after_mqueue_msgs (mqueue_t *queue) ;
 
 // funcao para debug. imprime os campos da estrutura task_t
 void print_tcb( task_t* task );
+
+// funcao que ajusta prioridade com base no tempo de execucao total
+void task_set_eet (task_t *task, int et);
+
+// funcao que devolve valor do tempo estimado de execucao
+int task_get_eet(task_t *task);
+
+// funcao que devolve valor do temo restante para terminar a execucao
+int task_get_ret(task_t *task);
+
 
 //==============================================================================
 

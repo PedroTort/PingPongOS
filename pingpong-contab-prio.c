@@ -45,23 +45,23 @@ int main (int argc, char *argv[])
    srand(time(NULL));
 
    task_create (&Pang, Body, "    Pang") ;
-   task_setprio (&Pang, 0);
+   task_set_eet (&Pang, 0);
    sleep(rand() % 3);
    
    task_create (&Peng, Body, "        Peng") ;
-   task_setprio (&Peng, -2);
+   task_set_eet (&Peng, -2);
    sleep(rand() % 3);
    
    task_create (&Ping, Body, "            Ping") ;
-   task_setprio (&Ping, -4);
+   task_set_eet (&Ping, -4);
    sleep(rand() % 3);
    
    task_create (&Pong, Body, "                Pong") ;
-   task_setprio (&Pong, -6);
+   task_set_eet (&Pong, -6);
    sleep(rand() % 3);
    
    task_create (&Pung, Body, "                    Pung") ;
-   task_setprio (&Pung, -8);
+   task_set_eet (&Pung, -8);
    sleep(rand() % 3);
    
    task_join(&Pung);

@@ -1,31 +1,116 @@
 #include "ppos.h"
 #include "ppos-core-globals.h"
-#include <string.h>
-
+#include <signal.h>
+#include <sys/time.h>
+#include <time.h>
 
 // ****************************************************************************
 // Coloque aqui as suas modificações, p.ex. includes, defines variáveis, 
 // estruturas e funções
 
 
+// estrutura que define um tratador de sinal (deve ser global ou static)
+struct sigaction action ;
+// estrutura de inicialização to timer
+struct itimerval timer ;
+
+const int quantum = 1; // em milissegundos
+int prevTaskId = 0;
+
+void interrupt_service_routine(int signum) {
+    systemTime += quantum;
+    if(taskExec->id == 1) {return;}
+    if(taskExec->quantum >0)
+    {   
+        taskExec->tempo_ja_executado += quantum;
+        taskExec->quantum--;
+    }
+    else
+    {   
+        task_yield(taskExec);
+    }
+}
+
+void interrupt_service_routine_init() {
+    printf("Inicializando\n");
+// registra a ação para o sinal de timer SIGALRM
+  action.sa_handler = interrupt_service_routine ;
+  sigemptyset (&action.sa_mask) ;
+  action.sa_flags = 0 ;
+  if (sigaction (SIGALRM, &action, 0) < 0)
+  {
+    perror ("Erro em sigaction: ") ;
+    exit (1) ;
+  }
+
+  // ajusta valores do temporizador
+  timer.it_value.tv_usec = quantum*1000 ;      // primeiro disparo, em micro-segundos
+  timer.it_value.tv_sec  = 0 ;      // primeiro disparo, em segundos
+  timer.it_interval.tv_usec = quantum *1000;   // disparos subsequentes, em micro-segundos
+  timer.it_interval.tv_sec  =  0;   // disparos subsequentes, em segundos
+
+  // arma o temporizador ITIMER_REAL (vide man setitimer)
+  if (setitimer (ITIMER_REAL, &timer, 0) < 0)
+  {
+    perror ("Erro em setitimer: ") ;
+    exit (1) ;
+  }
+}
+
+void task_set_eet (task_t *task, int et) {
+    if(task){
+        task->tempo_estimado_execucao = et;
+        if(task->state == PPOS_TASK_STATE_EXECUTING)
+        {
+            task->tempo_estimado_restante = task->tempo_estimado_execucao - task->tempo_ja_executado;
+        }
+    }
+    else{ 
+        taskExec->tempo_estimado_execucao = et;
+        if(taskExec->state == PPOS_TASK_STATE_EXECUTING)
+        {   
+            taskExec->tempo_estimado_restante = taskExec->tempo_estimado_execucao - taskExec->tempo_ja_executado;
+        }
+    }
+}
+
+int task_get_eet(task_t *task) {
+    if(task)
+        return task->tempo_estimado_execucao;
+    else{
+        return taskExec->tempo_estimado_execucao;
+    }
+}
+
+int task_get_ret(task_t *task) {
+    //int tempoAtual = systime();
+    if(task){
+        //task->tempo_restante = task->tempo_execucao - (tempoAtual - task->tempo_inicial);
+        return task->tempo_estimado_execucao - task->tempo_ja_executado;
+    }
+    else{
+        //taskExec->tempo_restante = taskExec->tempo_execucao - (tempoAtual - taskExec->tempo_inicial);
+        return taskExec->tempo_estimado_execucao - taskExec->tempo_ja_executado;
+    }
+}
+
 // ****************************************************************************
-
-
 
 void before_ppos_init () {
     // put your customization here
 #ifdef DEBUG
     printf("\ninit - BEFORE");
 #endif
-    printf("Mensagem inico - Init\n");
 }
 
 void after_ppos_init () {
     // put your customization here
+    interrupt_service_routine_init();
+    taskMain->quantum = 20;
+    task_set_eet(taskMain, 99999);
 #ifdef DEBUG
     printf("\ninit - AFTER");
 #endif
-    printf("Mensagem fim - Init\n");
 }
 
 void before_task_create (task_t *task ) {
@@ -35,12 +120,13 @@ void before_task_create (task_t *task ) {
 #endif
 }
 
-void after_task_create (task_t *task ) {
+void after_task_create (task_t *task) {
     // put your customization here
+    task_set_eet(task, 99999);
+    task->tempo_inicial = systemTime;
 #ifdef DEBUG
     printf("\ntask_create - AFTER - [%d]", task->id);
 #endif
-    memcpy(&task->msg, "MINHA TAREFA\0", 13);
 }
 
 void before_task_exit () {
@@ -52,6 +138,7 @@ void before_task_exit () {
 
 void after_task_exit () {
     // put your customization here
+    printf("Task %d exit: execution time %d ms, processor time %d ms, %d activations\n",taskExec->id,systemTime - taskExec->tempo_inicial,taskExec->tempo_ja_executado,taskExec->ativacoes);
 #ifdef DEBUG
     printf("\ntask_exit - AFTER- [%d]", taskExec->id);
 #endif
@@ -66,6 +153,8 @@ void before_task_switch ( task_t *task ) {
 
 void after_task_switch ( task_t *task ) {
     // put your customization here
+    task->quantum = 20;
+    
 #ifdef DEBUG
     printf("\ntask_switch - AFTER - [%d -> %d]", taskExec->id, task->id);
 #endif
@@ -83,7 +172,6 @@ void after_task_yield () {
     printf("\ntask_yield - AFTER - [%d]", taskExec->id);
 #endif
 }
-
 
 void before_task_suspend( task_t *task ) {
     // put your customization here
@@ -401,11 +489,21 @@ int after_mqueue_msgs (mqueue_t *queue) {
 }
 
 task_t * scheduler() {
-    // FCFS scheduler
     if ( readyQueue != NULL ) {
-        return readyQueue;
+
+        task_t* readyQueueAux = readyQueue;
+        task_t* minTimeLeftTask = readyQueueAux;
+        readyQueueAux = readyQueueAux->next;
+        int firstId = readyQueue->id;
+        while(readyQueueAux->id != firstId){
+            if(task_get_ret(readyQueueAux) < task_get_ret(minTimeLeftTask))
+                minTimeLeftTask = readyQueueAux;
+            readyQueueAux = readyQueueAux->next;
+        }
+        //Para contar metricas de ativacoes
+        if (minTimeLeftTask->id != prevTaskId) {minTimeLeftTask->ativacoes ++; prevTaskId = minTimeLeftTask->id;}
+        return minTimeLeftTask;
     }
-    return NULL;
 }
 
 
